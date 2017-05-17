@@ -1,0 +1,36 @@
+module ALU_tb;
+
+	// Inputs
+	reg [31:0] A;
+	reg [31:0] B;
+	reg [3:0] select;
+
+	// Outputs
+	wire [31:0] ALU_out;
+	wire slt;
+	wire cout;
+	wire zero;
+
+	// Instantiate the Unit Under Test (UUT)
+	ALU uut (
+		.A(A), 
+		.B(B), 
+		.select(select), 
+		.ALU_out(ALU_out),
+		.slt(slt),
+		.cout(cout), 
+		.zero(zero)
+	);
+
+	initial begin
+		A = 0;
+		B = 0;
+		select = 0;
+		#5 select = 4'b0110; A = 1; B= 1; //add both pos
+		#5 select = 4'b0100; A = 200; B = 350;
+		#5 $finish;
+
+	end
+      
+endmodule
+

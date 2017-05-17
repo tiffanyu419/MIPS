@@ -69,121 +69,119 @@ module control(
 		
 	always@(posedge clk)
 		case(state)
-			fetch:
-				begin
-					curr_instr <= instr_mem[pc];
-					opCode <= instr_mem[pc][31:26];
-					state <= decode;
-				end
+		  fetch:
+		     begin
+			curr_instr <= instr_mem[pc];
+			opCode <= instr_mem[pc][31:26];
+			state <= decode;
+		     end
 				
-			decode:
-				begin
-					case(opCode)
-						jump:
-							begin
-								immData[15:0] <= curr_instr[15:0];
-								immData[31:16] <= 16'd0;
-							end
-						lw, li:
-							begin
-								address[4:0] <= curr_instr[25:21];
-								address[31:5] <= 27'd0;
-								rd <= curr_instr[20:16];
-								immData[15:0] <= curr_instr[15:0];
-								immData[31:16] <= 16'd0;
-								ALU_op <= 2'b00;
-							end
-						sw:
-							begin
-								address[4:0] <= curr_instr[20:16];
-								address[31:5] <= 27'd0;
-								rs <= curr_instr[25:21];
-								immData[15:0] <= curr_instr[15:0];
-								immData[31:16] <= 16'd0;
-								ALU_op <= 2'b00;
-							end
-						beq, bne:
-							begin
-								rs =  curr_instr[25:21];
-								rt =  curr_instr[20:16];
-								immData[15:0] <= curr_instr[15:0];
-								A <= registers[rs];
-								B <= registers[rt];
-								ALU_op <= 2'b01;
-							end
-						r_type:
-							begin
-								rs =  curr_instr[25:21];
-								rt =  curr_instr[20:16];
-								rd =	 curr_instr[15:11];
-								A <= registers[rs];
-								B <= registers[rt];
-								func <= curr_instr[5:0];
-								ALU_op <= 2'b10;
-							end
-						endcase
-					state <= ALU_control;
-				end
-			ALU_control:
-				begin
-					case(ALU_op)
-						2'b00:select = 4'b0010; 		
-						2'b01:select = 4'b0110;
-						2'b10:
-							case(func)
-								6'b100000:select = 4'b0010; //add		
-								6'b100010:select = 4'b0110; //subtract
-								6'b100100:select = 4'b0000; //AND
-								6'b100101:select = 4'b0001; //OR
-								6'b101010:select = 4'b0111; //SLT
-								6'b000000:select = 4'b0011; //SLL
-								6'b101110:select = 4'b0100; //mult
-								6'b101011:select = 4'b0101; //div
-							endcase
-					endcase
-					state <= exec;
-				end
+		   decode:
+		      begin
+			case(opCode)
+			   jump:
+			     begin
+				immData[15:0] <= curr_instr[15:0];
+				immData[31:16] <= 16'd0;
+			     end
+			   lw, li:
+			      begin
+				address[4:0] <= curr_instr[25:21];
+				address[31:5] <= 27'd0;
+				rd <= curr_instr[20:16];
+				immData[15:0] <= curr_instr[15:0];
+				immData[31:16] <= 16'd0;
+				ALU_op <= 2'b00;
+   			      end
+		 	   sw:
+	 		      begin
+				address[4:0] <= curr_instr[20:16];
+				address[31:5] <= 27'd0;
+				rs <= curr_instr[25:21];
+				immData[15:0] <= curr_instr[15:0];
+				immData[31:16] <= 16'd0;
+				ALU_op <= 2'b00;
+		   	      end
+			   beq, bne:
+			      begin
+				rs =  curr_instr[25:21];
+				rt =  curr_instr[20:16];
+				immData[15:0] <= curr_instr[15:0];
+				A <= registers[rs];
+				B <= registers[rt];
+				ALU_op <= 2'b01;
+			      end
+			    r_type:
+			      begin
+				rs =  curr_instr[25:21];
+				rt =  curr_instr[20:16];
+				rd =  curr_instr[15:11];
+				A <= registers[rs];
+				B <= registers[rt];
+				func <= curr_instr[5:0];
+				ALU_op <= 2'b10;
+	 		      end
+			  endcase
+			  state <= ALU_control;
+		        end
 			
-			exec:
-				begin
-					case(opCode)
-						r_type:
-							begin
-								pcIncr <= 4'd1;
-								ALU_out <= aluOut;
-								if (select == 4'b0111) //if slt result should save slt flag
-									begin
-										ALU_out[31:1] <= 31'd0;
-										ALU_out[0] <= a_slt;
-									end
-							end
-						jump: pcIncr <= immData;
-						beq: pcIncr <= ALU_zero ? immData : 32'd1;
-						bne: pcIncr <= ALU_zero ? 32'd1: immData;
-						default: pcIncr <= 4'd1;
-					endcase
-					state <= store;
-				end
+		     ALU_control:
+		 	begin
+			  case(ALU_op)
+				2'b00:select = 4'b0010; 		
+				2'b01:select = 4'b0110;
+				2'b10:
+				case(func)
+					6'b100000:select = 4'b0010; //add		
+					6'b100010:select = 4'b0110; //subtract
+					6'b100100:select = 4'b0000; //AND
+					6'b100101:select = 4'b0001; //OR
+					6'b101010:select = 4'b0111; //SLT
+					6'b000000:select = 4'b0011; //SLL
+					6'b101110:select = 4'b0100; //mult
+					6'b101011:select = 4'b0101; //div
+				endcase
+			   endcase
+			   state <= exec;
+			end
 			
-			store:
-				begin
-					case(opCode)
-						lw: //deal with offset
-							registers[rd] <= memory[memAdd[3:0]]; 
-						li:
-							registers[rd] <= immData;
-						sw:
-							memory[memAdd[3:0]] <= registers[rs];
-						r_type:
-							begin
-								registers[rd] <= ALU_out;
-							end
-					endcase
-					curr_pc <= next_PC;
-					pc <= next_PC[3:0];
-					state <= fetch;
-				end
-			endcase
+		     exec:
+			begin
+			  case(opCode)
+				r_type:
+			 	  begin
+					pcIncr <= 4'd1;
+					ALU_out <= aluOut;
+					if (select == 4'b0111) //if slt result should save slt flag
+					  begin
+					    ALU_out[31:1] <= 31'd0;
+					    ALU_out[0] <= a_slt;
+					  end
+				  end
+				jump: pcIncr <= immData;
+				beq: pcIncr <= ALU_zero ? immData : 32'd1;
+				bne: pcIncr <= ALU_zero ? 32'd1: immData;
+				default: pcIncr <= 4'd1;
+			  endcase
+			  state <= store;
+			end
+			
+		      store:
+		        begin
+			  case(opCode)
+				lw: registers[rd] <= memory[memAdd[3:0]]; 
+				li: registers[rd] <= immData;
+				sw: memory[memAdd[3:0]] <= registers[rs];	
+				r_type:
+				  begin
+					registers[rd] <= ALU_out;
+				  end
+			  endcase
+			  curr_pc <= next_PC;
+		 	  pc <= next_PC[3:0];
+			  state <= fetch;
+			end
+		endcase
 			
 	//Using the ALU
 	ALU alu(A, B, select, aluOut, a_slt, cout2, ALU_zero);

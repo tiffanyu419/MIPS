@@ -1,0 +1,193 @@
+module control(
+   input clk,
+	 input run,
+	 output reg [3:0] pc,
+	 output reg [31:0] pcIncr,
+	 output reg [31:0] curr_instr,
+	 output reg [31:0] A, B,
+	 output reg [3:0]select,
+	 output reg [5:0] opCode,
+	 output reg [4:0] rs, rt, rd,
+	 output reg [31:0] immData,
+	 output reg [31:0] ALU_out,
+	 output reg [2:0] state
+    );
+	 
+	 parameter
+	 jump = 6'b000010, bne= 6'b000101, beq = 6'b000100,
+	 lw = 6'b100011, sw = 6'b101011 , r_type = 6'b000000, li = 6'b000001;
+	 
+	 parameter
+	 fetch=3'd0, decode=3'd1, ALU_control = 3'd2, exec=3'd3, store=3'd4;
+   
+	//Memory storage units
+	reg [31:0]registers[15:0];
+	reg [31:0]memory[15:0];
+	reg [31:0]instr_mem[15:0];
+	
+	//Initialization of instr and memory
+	always @(run)
+		begin
+			registers[0] =  32'd1; //save the value 1 in reg 0
+			memory[2] =  32'b00000000000000000000000000010100; //20 in mem[2]
+			//memory[2] =  32'b11111111111111111111111111110110; //-10 in mem[2]
+			memory[3] =  32'b00000000000000000000000000001010; //10 in mem[3]
+			//Instructions
+			instr_mem[0] = 32'b10001100000000010000000000000010; // lw: i in 2 place in mem(rs) -> reg 1
+			instr_mem[1] = 32'b10001100000000100000000000000011; // lw: j in 3 place in mem(rs) -> reg 2
+			instr_mem[2] = 32'b00000100000000110000000011001000; // li: a = 200 -> reg 3
+			instr_mem[3] = 32'b00000100000001000000000101011110; // li: b = 350 -> reg 4
+			instr_mem[4] = 32'b00000100000001010000001010001010; // li: c = 650 -> reg 5
+			instr_mem[5] = 32'b00000100000001100000001000100110; // li: d = 550 -> reg 6
+			instr_mem[6] = 32'b00000000001000100011100000101010; // slt: i, j res -> reg 7
+			instr_mem[7] = 32'b00010000111000000000000000000100; // beq: reg 7 and 1(reg0) -> immed=4(if i<j jmp to 11)
+			instr_mem[8] = 32'b00000000100001010011000000100000; //add: c(reg5)+d(reg6) -> reg8
+			instr_mem[9] = 32'b00000000110001000011000000101011; //div: reg8/b(reg4) -> reg8 
+			instr_mem[10] = 32'b00001000000000000000000000000100; //jmp to 14 -> immed4 (saving f into mem[0])
+			instr_mem[11] = 32'b00000000011001000100000000101110; //mult: a(reg3)*b(reg4)->reg8
+			instr_mem[12] = 32'b00000001000001010100000000100010; //sub: reg8-c(reg5) -> reg8
+			instr_mem[13] = 32'b00000001000001100100000000100000; //add: reg8 + d(reg6) -> reg8
+			instr_mem[14] = 32'b10101100000001100000000000000000;//sw: reg8 -> mem[0]
+			end
+	
+	//Variables
+	wire a_slt, pc_slt, mem_slt, cout2, cout3, cout4, memoffz, pcz, ALU_zero;
+	reg [3:0] opAdd = 4'b0010;
+	reg [31:0] address, curr_pc;
+	reg [5:0] func;
+	reg [1:0] ALU_op;
+	wire [31:0] aluOut;
+	wire [31:0] next_PC;
+	wire [31:0] memAdd;
+	
+	initial
+		begin
+		pc = 4'b000;
+		curr_pc = 32'd0;
+		state = fetch;
+		end
+		
+	always@(posedge clk)
+		case(state)
+			fetch:
+				begin
+					curr_instr <= instr_mem[pc];
+					opCode <= instr_mem[pc][31:26];
+					state <= decode;
+				end
+				
+			decode:
+				begin
+					case(opCode)
+						jump:
+							begin
+								immData[15:0] <= curr_instr[15:0];
+								immData[31:16] <= 16'd0;
+							end
+						lw, li:
+							begin
+								address[4:0] <= curr_instr[25:21];
+								address[31:5] <= 27'd0;
+								rd <= curr_instr[20:16];
+								immData[15:0] <= curr_instr[15:0];
+								immData[31:16] <= 16'd0;
+								ALU_op <= 2'b00;
+							end
+						sw:
+							begin
+								address[4:0] <= curr_instr[20:16];
+								address[31:5] <= 27'd0;
+								rs <= curr_instr[25:21];
+								immData[15:0] <= curr_instr[15:0];
+								immData[31:16] <= 16'd0;
+								ALU_op <= 2'b00;
+							end
+						beq, bne:
+							begin
+								rs =  curr_instr[25:21];
+								rt =  curr_instr[20:16];
+								immData[15:0] <= curr_instr[15:0];
+								A <= registers[rs];
+								B <= registers[rt];
+								ALU_op <= 2'b01;
+							end
+						r_type:
+							begin
+								rs =  curr_instr[25:21];
+								rt =  curr_instr[20:16];
+								rd =	 curr_instr[15:11];
+								A <= registers[rs];
+								B <= registers[rt];
+								func <= curr_instr[5:0];
+								ALU_op <= 2'b10;
+							end
+						endcase
+					state <= ALU_control;
+				end
+			ALU_control:
+				begin
+					case(ALU_op)
+						2'b00:select = 4'b0010; 		
+						2'b01:select = 4'b0110;
+						2'b10:
+							case(func)
+								6'b100000:select = 4'b0010; //add		
+								6'b100010:select = 4'b0110; //subtract
+								6'b100100:select = 4'b0000; //AND
+								6'b100101:select = 4'b0001; //OR
+								6'b101010:select = 4'b0111; //SLT
+								6'b000000:select = 4'b0011; //SLL
+								6'b101110:select = 4'b0100; //mult
+								6'b101011:select = 4'b0101; //div
+							endcase
+					endcase
+					state <= exec;
+				end
+			
+			exec:
+				begin
+					case(opCode)
+						r_type:
+							begin
+								pcIncr <= 4'd1;
+								ALU_out <= aluOut;
+								if (select == 4'b0111) //if slt result should save slt flag
+									begin
+										ALU_out[31:1] <= 31'd0;
+										ALU_out[0] <= a_slt;
+									end
+							end
+						jump: pcIncr <= immData;
+						beq: pcIncr <= ALU_zero ? immData : 32'd1;
+						bne: pcIncr <= ALU_zero ? 32'd1: immData;
+						default: pcIncr <= 4'd1;
+					endcase
+					state <= store;
+				end
+			
+			store:
+				begin
+					case(opCode)
+						lw: //deal with offset
+							registers[rd] <= memory[memAdd[3:0]]; 
+						li:
+							registers[rd] <= immData;
+						sw:
+							memory[memAdd[3:0]] <= registers[rs];
+						r_type:
+							begin
+								registers[rd] <= ALU_out;
+							end
+					endcase
+					curr_pc <= next_PC;
+					pc <= next_PC[3:0];
+					state <= fetch;
+				end
+			endcase
+			
+	//Using the ALU
+	ALU alu(A, B, select, aluOut, a_slt, cout2, ALU_zero);
+	ALU p_c(curr_pc, pcIncr, opAdd, next_PC, pc_slt, cout3, pcz); //current pc + pcIncr = next_PC
+	ALU memoffset(address, immData, select, memAdd, mem_slt, cout4, memoffz);
+	
+endmodule

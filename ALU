@@ -1,0 +1,97 @@
+module ALU(
+    input [31:0] A,
+    input [31:0] B,
+	  input [3:0] select,
+    output reg [31:0] ALU_out,
+    output reg slt,
+    output reg c_out, 
+	  output reg zero
+    );
+    
+	reg [31:0] res;
+	wire sum_cout, mult_cout, diff_cout;
+	wire [31:0] sum, sub, div, mult, remainder, AND, OR, SLL, SLT;
+	
+	//Calculate all the possible instructions and save into registers
+	thirty_two_div M1 (A, B, div, remainder);
+	thirty_two_mult M2 (A, B, mult, mult_cout);
+	thirty_two_bit_adder M3 (sum, sum_cout, A, B);
+	thirty_two_sub M4(diff, diff_cout, A, B);
+	shift_left M5(SLL, A, B);
+	
+	//Set flags to be zero as a default
+	assign c_out = 0;
+	assign zero = 0;
+  assgin slt = 0;
+	
+	//Makes sure nothing outputs if enable is zero
+	assign ALU_out = enable ? res:32'bz;
+	
+	//Look at select
+	always @(A or B or select)
+	begin
+		if (select == 4'b0010)begin
+			res[31:0] = sum;
+			c_out = sum_cout;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end 
+		else
+		if (select == 4'b0110)begin
+			res[31:0] = diff;
+			c_out = diff_cout;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+		else
+		if (select == 4'b0101)begin
+			res[31:0] = div;
+			if (A == 0)begin
+				c_out = 1'b1;
+				end
+			end
+		else		
+		if (select == 4'b0011)begin
+			res = mult[31:0];
+			c_out = mult_cout;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+		else
+		if (select == 4'b0000)begin
+			res[31:0] = A&B;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+		else
+		if (select == 4'b0001)begin
+			res[31:0] = A|B;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+		else
+		if (select == 4'b0111)begin
+			res[31:0] = SLL;
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+    if (select == 4'b0111)begin
+      res[31:0] = diff;
+			c_out = diff_cout;
+      if (res[31] == 1) begin
+        slt = 1;
+        end
+			if (res == 32'b0) begin
+				zero = 1;
+				end
+			end
+		else res = 64'bz; //not valid select bit
+	end
+	
+endmodule

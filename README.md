@@ -1,25 +1,13 @@
-CS 68 Lab 5 - Gene Expression Analysis with classification
+Computer Architecture - Implementation of Single Cycle Processor
 
-Name 1: Maggie Eberts
-
-Name 2: meberts1
-
-userId1: Tiffany Yu
-
-userId2: tyu2
-
-Number of late days used for this lab: 0
-
+Tiffany Yu
 
 ----------------------
-Lab Questionnaire - consider the lab as a whole, including problem set and programming assignment.  This will not effect your grade
+This code is for a single cycle processor implemented in Verilog. The processor file is the main control of the processer.
+The ALU file contains the ALU used within the processor. 
 ----------------------
-
-1. Approximately, how many hours did you take to complete this lab (provide your answer as a single integer on the line below).
-6
-
-2. How difficult did you find this lab?  (1-5, with 5 being very difficult and 1 being very easy)
-3
-
-3. Describe the biggest challenge you faced on this lab:
-Combining the predictions from each of the test folds into one list to compare with the actual classifications.
+Instructions on use:
+1. Convert desired code into MIPS assembly code
+2. Convert MIPS assembly code to binary instructions
+3. Save desired constants in memory
+4. Save series of instructions in instruction memory

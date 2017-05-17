@@ -1,3 +1,4 @@
+----------------------
 Computer Architecture - Implementation of Single Cycle Processor
 
 Tiffany Yu

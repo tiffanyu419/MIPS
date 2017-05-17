@@ -1,0 +1,11 @@
+module half_adder(
+    output sum,
+    output cout,
+    input a,
+    input b,
+    );
+	
+	xor M1(sum, a, b);
+	and M2(cout, a, b);
+
+endmodule

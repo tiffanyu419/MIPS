@@ -2,7 +2,7 @@ Computer Architecture - Implementation of Single Cycle Processor
 ----------------------
 Written by: Tiffany Yu
 
-This code is for a single cycle processor implemented in Verilog. The processor file is the main control of the processer.
+This code is for a single cycle processor implemented in Verilog using the program ISE Design Suite. The processor file is the main control of the processer.
 The ALU file contains the ALU used within the processor. 
 
 Instructions on use:

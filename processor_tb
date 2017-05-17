@@ -1,0 +1,55 @@
+module control_tb;
+
+	// Inputs
+	reg clk = 0;
+	reg run;
+
+	// Output
+	wire [3:0] pc;
+	wire [31:0] pcIncr;
+	wire [31:0] curr_instr;
+	wire [31:0] A;
+	wire [31:0] B;
+	wire [3:0]select;
+	wire [5:0] opCode;
+	wire [4:0] rs;
+	wire [4:0] rt;
+	wire [4:0] rd;
+	wire [31:0] immData;
+	wire [31:0] ALU_out;
+	wire [2:0] state;
+
+	// Instantiate the Unit Under Test (UUT)
+	control uut (
+		.clk(clk), 
+		.run(run), 
+		.pc(pc),
+		.pcIncr(pcIncr),
+		.curr_instr(curr_instr),
+		.A(A),
+		.B(B),
+		.select(select),
+		.opCode(opCode),
+		.rs(rs),
+		.rt(rt),
+		.rd(rd),
+		.immData(immData),
+		.ALU_out(ALU_out),
+		.state(state)
+	);
+
+	always #7
+     clk = ~clk;
+	  
+	initial begin
+		// Initialize Inputs
+		run = 1;
+		
+		// Wait 100 ns for global reset to finish
+		#100;
+        
+		// Add stimulus here
+
+	end
+      
+endmodule

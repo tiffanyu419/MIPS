@@ -10,4 +10,3 @@ Instructions on use:
 2. Convert MIPS assembly code to binary instructions
 3. Save desired constants in memory
 4. Save series of instructions in instruction memory
-# Machine-Learning-Bioinformatics
